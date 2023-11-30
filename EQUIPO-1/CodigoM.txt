@@ -1,0 +1,141 @@
+// FolderPath
+"C:\Datathon\BD" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+
+// Folder
+let
+    Source = Folder.Files(FolderPath)
+in
+    Source
+
+// Fivarapa
+let
+    Source = Folder,
+    #"Filtered Rows" = Table.SelectRows(Source, each ([Name] = "1_FiVarApa_1.csv" or [Name] = "2_FiVarApa_2.csv" or [Name] = "3_FiVarApa_3.csv")),
+    #"Filtered Hidden Files1" = Table.SelectRows(#"Filtered Rows", each [Attributes]?[Hidden]? <> true),
+    #"Invoke Custom Function1" = Table.AddColumn(#"Filtered Hidden Files1", "Transform File", each #"Transform File"([Content])),
+    #"Renamed Columns1" = Table.RenameColumns(#"Invoke Custom Function1", {"Name", "Source.Name"}),
+    #"Removed Other Columns1" = Table.SelectColumns(#"Renamed Columns1", {"Source.Name", "Transform File"}),
+    #"Expanded Table Column1" = Table.ExpandTableColumn(#"Removed Other Columns1", "Transform File", Table.ColumnNames(#"Transform File"(#"Sample File"))),
+    #"Changed Type" = Table.TransformColumnTypes(#"Expanded Table Column1",{{"Source.Name", type text}, {"TIPODNI", type text}, {"DNI", type text}, {"FECING", type date}, {"FECHAING", type date}, {"REINGRESO", Int64.Type}, {"HC", type text}, {"TIPO", Int64.Type}, {"PACIENTE", type text}, {"FECEGR", type date}, {"DIAS", Int64.Type}, {"EDAD", Int64.Type}, {"SEXO", type text}, {"PROCEDENCIA", Int64.Type}, {"PATOLOGIA", Int64.Type}, {"CATKNAUS", Int64.Type}, {"TEMPERATURA", type number}, {"TENSART", Int64.Type}, {"FRECCARD", Int64.Type}, {"FRECRESP", Int64.Type}, {"TIPOFIO2", Int64.Type}, {"VALFIO2", type number}, {"PAO2", type number}, {"PCO2", type number}, {"PHART", type number}, {"NA", Int64.Type}, {"K", type number}, {"CREATIN", type number}, {"IRA", type text}, {"HEMATROC", type number}, {"LEUCOC", type number}, {"GLASGOW", Int64.Type}, {"COMORBIL", Int64.Type}, {"SCOREAPA", Int64.Type}, {"PROBABMORT", Int64.Type}, {"TRAQ", type text}, {"TRAQI", type text}, {"TRAQE", type text}, {"TRAQFI", type datetime}, {"TRAQFF", type any}, {"SNG", type text}, {"SNGI", type text}, {"SNGE", type text}, {"ARM", type text}, {"SF", type text}, {"SFI", type text}, {"SFE", type text}, {"FECINGH", type any}, {"FECEGRH", type any}, {"RESTRAT", Int64.Type}, {"CAPACIDADCEREBRAL", type any}, {"DISCAPACIDADGENERAL", type any}, {"AUTOPSIA", type any}, {"RESULTADOEGRESOH", type any}, {"Dependencia", type text}}),
+    #"Sorted Rows" = Table.Sort(#"Changed Type",{{"DNI", Order.Descending}}),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Sorted Rows",{{"FECING", Int64.Type}}),
+    #"Added Custom" = Table.AddColumn(#"Changed Type1", "UID", each [DNI]&Number.ToText([FECING])),
+    #"Reordered Columns" = Table.ReorderColumns(#"Added Custom",{"Source.Name", "UID", "TIPODNI", "DNI", "FECING", "FECHAING", "REINGRESO", "HC", "TIPO", "PACIENTE", "FECEGR", "DIAS", "EDAD", "SEXO", "PROCEDENCIA", "PATOLOGIA", "CATKNAUS", "TEMPERATURA", "TENSART", "FRECCARD", "FRECRESP", "TIPOFIO2", "VALFIO2", "PAO2", "PCO2", "PHART", "NA", "K", "CREATIN", "IRA", "HEMATROC", "LEUCOC", "GLASGOW", "COMORBIL", "SCOREAPA", "PROBABMORT", "TRAQ", "TRAQI", "TRAQE", "TRAQFI", "TRAQFF", "SNG", "SNGI", "SNGE", "ARM", "SF", "SFI", "SFE", "FECINGH", "FECEGRH", "RESTRAT", "CAPACIDADCEREBRAL", "DISCAPACIDADGENERAL", "AUTOPSIA", "RESULTADOEGRESOH", "Dependencia"}),
+    #"Replaced Errors" = Table.ReplaceErrorValues(#"Reordered Columns", {{"TRAQFI", null},{"TRAQFF", null}}),
+    #"Added Conditional Column" = Table.AddColumn(#"Replaced Errors", "Custom", each
+if [Dependencia] = "" then 
+  null 
+else 
+  if [Dependencia] = "Pública" then 
+    "Publica" 
+  else if [Dependencia] = "Publica"  then 
+    "Publica" 
+  else "Privada"),
+    #"Removed Columns" = Table.RemoveColumns(#"Added Conditional Column",{"Dependencia"}),
+    #"Renamed Columns" = Table.RenameColumns(#"Removed Columns",{{"Custom", "Dependencia"}})
+in
+    #"Renamed Columns"
+
+// Transform File
+let
+    Source = (Parameter1 as binary) => let
+        Source = Csv.Document(Parameter1,[Delimiter=",", Columns=54, QuoteStyle=QuoteStyle.None]),
+        #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true])
+    in
+        #"Promoted Headers"
+in
+    Source
+
+// Sample File
+let
+    Source = Folder,
+    #"Filtered Rows" = Table.SelectRows(Source, each ([Name] = "1_FiVarApa_1.csv" or [Name] = "2_FiVarApa_2.csv" or [Name] = "3_FiVarApa_3.csv")),
+    Navigation1 = #"Filtered Rows"{0}[Content]
+in
+    Navigation1
+
+// Parameter1
+#"Sample File" meta [IsParameterQuery=true, BinaryIdentifier=#"Sample File", Type="Binary", IsParameterQueryRequired=true]
+
+// Transform Sample File
+let
+    Source = Csv.Document(Parameter1,[Delimiter=",", Columns=54, QuoteStyle=QuoteStyle.None]),
+    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true])
+in
+    #"Promoted Headers"
+
+// CVC_Si-No
+let
+    Source = Folder,
+    #"G:\ shortcut-targets-by-id\1NCUF5RnjxE4Czr7bLmyH-NM8j4WdcGol\SATIQ-ADULTOS\_4_FiMotingD_Antecedentes csv" = Source{[Name="9_FiPracticaCVC.csv"]}[Content],
+    #"Imported CSV1" = Csv.Document(#"G:\ shortcut-targets-by-id\1NCUF5RnjxE4Czr7bLmyH-NM8j4WdcGol\SATIQ-ADULTOS\_4_FiMotingD_Antecedentes csv",[Delimiter=",", Columns=11, QuoteStyle=QuoteStyle.None]),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Imported CSV1", [PromoteAllScalars=true]),
+    #"Removed Other Columns" = Table.SelectColumns(#"Promoted Headers",{"DNI", "FECING"}),
+    #"Changed Type" = Table.TransformColumnTypes(#"Removed Other Columns",{{"FECING", type date}}),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Changed Type",{{"FECING", Int64.Type}}),
+    #"Added Custom" = Table.AddColumn(#"Changed Type1", "UID", each [DNI]&Number.ToText([FECING])),
+    #"Removed Columns" = Table.RemoveColumns(#"Added Custom",{"DNI", "FECING"}),
+    #"Added Custom1" = Table.AddColumn(#"Removed Columns", "CVC", each 1)
+in
+    #"Added Custom1"
+
+// SOFA_LastDay
+let
+    Source = Folder,
+    #"G:\ shortcut-targets-by-id\1NCUF5RnjxE4Czr7bLmyH-NM8j4WdcGol\SATIQ-ADULTOS\_4_FiMotingD_Antecedentes csv" = Source{[Name="15_FiSofa.csv"]}[Content],
+    #"Imported CSV" = Csv.Document(#"G:\ shortcut-targets-by-id\1NCUF5RnjxE4Czr7bLmyH-NM8j4WdcGol\SATIQ-ADULTOS\_4_FiMotingD_Antecedentes csv",[Delimiter=",", Columns=17, QuoteStyle=QuoteStyle.None]),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Imported CSV", [PromoteAllScalars=true]),
+    #"Removed Other Columns" = Table.SelectColumns(#"Promoted Headers",{"DNI", "FECING", "FECHA","SOFA"}),
+    #"Changed Type" = Table.TransformColumnTypes(#"Removed Other Columns",{{"FECING", type date}, {"FECHA", type date}, {"SOFA", Int64.Type}}),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Changed Type",{{"FECING", Int64.Type}}),
+    #"Added Custom" = Table.AddColumn(#"Changed Type1", "UID", each [DNI]&Number.ToText([FECING])),
+    #"Removed Columns" = Table.RemoveColumns(#"Added Custom",{"DNI", "FECING"}),
+    Custom1 = Table.Buffer(#"Removed Columns"),
+    #"Removed Duplicates" = Table.Distinct(Custom1, {"FECHA","UID"}),
+    #"Removed Columns1" = Table.RemoveColumns(#"Removed Duplicates",{"FECHA"}),
+    #"Reordered Columns" = Table.ReorderColumns(#"Removed Columns1",{"UID", "SOFA"})
+in
+    #"Reordered Columns"
+
+// UTI
+let
+    Source = Folder,
+    #"G:\ shortcut-targets-by-id\1NCUF5RnjxE4Czr7bLmyH-NM8j4WdcGol\SATIQ-ADULTOS\_4_FiMotingD_Antecedentes csv" = Source{[Name="12_FiCompUti.csv"]}[Content],
+    #"Imported CSV1" = Csv.Document(#"G:\ shortcut-targets-by-id\1NCUF5RnjxE4Czr7bLmyH-NM8j4WdcGol\SATIQ-ADULTOS\_4_FiMotingD_Antecedentes csv",[Delimiter=",", Columns=19, QuoteStyle=QuoteStyle.None]),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Imported CSV1", [PromoteAllScalars=true]),
+    #"Removed Columns2" = Table.RemoveColumns(#"Promoted Headers",{"TIPODNI", "NumNAR", "NumUTI", "NumBAC", "NumESCARA", "NumEXTUB", "NumDespSNG", "NumCaida", "NumInfHerida"}),
+    #"Changed Type" = Table.TransformColumnTypes(#"Removed Columns2",{{"DNI", type text}, {"FECING", type date}, {"NAR", Int64.Type}, {"UTI", Int64.Type}, {"BACTAC", Int64.Type}, {"ESCARAS", Int64.Type}, {"EXTUBACION_ACCIDENTAL", Int64.Type}, {"DESPLAZAMIENTO_SNG", Int64.Type}, {"CAIDA", Int64.Type}, {"INFECCION_HERIDA", Int64.Type}}),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Changed Type",{{"FECING", Int64.Type}}),
+    #"Added Custom" = Table.AddColumn(#"Changed Type1", "UID", each [DNI]&Number.ToText([FECING])),
+    #"Removed Columns" = Table.RemoveColumns(#"Added Custom",{"DNI", "FECING"}),
+    #"Removed Duplicates" = Table.Distinct(#"Removed Columns", {"UID"}),
+    #"Reordered Columns" = Table.ReorderColumns(#"Removed Duplicates",{"UID", "NAR", "UTI", "BACTAC", "ESCARAS", "EXTUBACION_ACCIDENTAL", "DESPLAZAMIENTO_SNG", "CAIDA", "INFECCION_HERIDA"})
+in
+    #"Reordered Columns"
+
+// RESTRAT
+let
+    Source = Excel.Workbook(File.Contents("C:\Datathon\BD\0_Diccionario_Datos Modificado.xlsx"), null, true),
+    Table_6_Table = Source{[Item="Table_6",Kind="Table"]}[Data],
+    #"Changed Type" = Table.TransformColumnTypes(Table_6_Table,{{"CODIGO", Int64.Type}, {"DESCRIPCION", type text}}),
+    #"Sorted Rows" = Table.Sort(#"Changed Type",{{"Agrupador RSTRAT", Order.Ascending}}),
+    #"Filtered Rows" = Table.SelectRows(#"Sorted Rows", each ([Agrupador RSTRAT] <> "Alta" and [Agrupador RSTRAT] <> "Otros")),
+    #"Sorted Rows1" = Table.Sort(#"Filtered Rows",{{"CODIGO", Order.Ascending}})
+in
+    #"Sorted Rows1"
+
+// BaseCompleta
+let
+    Source = Fivarapa,
+    #"Merged CVC" = Table.NestedJoin(Source, {"UID"}, #"CVC_Si-No", {"UID"}, "CVC_Si-No", JoinKind.LeftOuter),
+    #"Merged Queries1" = Table.NestedJoin(#"Merged CVC", {"UID"}, SOFA_LastDay, {"UID"}, "SOFA_LastDay", JoinKind.LeftOuter),
+    #"Merged Queries2" = Table.NestedJoin(#"Merged Queries1", {"UID"}, UTI, {"UID"}, "UTI", JoinKind.LeftOuter),
+    #"Expanded CVC_Si-No" = Table.ExpandTableColumn(#"Merged Queries2", "CVC_Si-No", {"CVC"}, {"CVC_Si-No"}),
+    #"Expanded SOFA_LastDay" = Table.ExpandTableColumn(#"Expanded CVC_Si-No", "SOFA_LastDay", {"SOFA"}, {"SOFA_LastDay"}),
+    #"Expanded UTI" = Table.ExpandTableColumn(#"Expanded SOFA_LastDay", "UTI", {"NAR", "UTI", "BACTAC", "ESCARAS", "EXTUBACION_ACCIDENTAL", "DESPLAZAMIENTO_SNG", "CAIDA", "INFECCION_HERIDA"}, {"UTI.NAR", "UTI.UTI", "UTI.BACTAC", "UTI.ESCARAS", "UTI.EXTUBACION_ACCIDENTAL", "UTI.DESPLAZAMIENTO_SNG", "UTI.CAIDA", "UTI.INFECCION_HERIDA"}),
+    #"Filtered Rows" = Table.SelectRows(#"Expanded UTI", each ([Source.Name] <> "3_FiVarApa_3.csv")),
+    #"Merged Queries" = Table.NestedJoin(#"Filtered Rows", {"RESTRAT"}, RESTRAT, {"CODIGO"}, "RESTRAT.1", JoinKind.LeftOuter),
+    #"Expanded RESTRAT.1" = Table.ExpandTableColumn(#"Merged Queries", "RESTRAT.1", {"Agrupador RSTRAT"}, {"Agrupador RSTRAT"}),
+    Custom1 = Table.Buffer(#"Expanded RESTRAT.1")
+in
+    Custom1
